@@ -212,7 +212,10 @@ def analyze_stock(ticker):
             grade = "D"
 
         price_change = last_close - prev_close
-        price_change_pct = (price_change / prev_close) * 100
+        price_change_pct = (
+    (price_change / prev_close) * 100
+    if prev_close != 0 else 0
+)
 
         chart_data = []
 
