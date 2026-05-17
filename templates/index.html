@@ -6,7 +6,9 @@
 <title>StockPulse — Real-Time Analyzer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 
 <style>
 :root {
@@ -391,160 +393,359 @@ async function runAnalysis() {
 
 function renderAll(results) {
   const grid = document.getElementById('cards-grid');
-  let buys=0, holds=0, avoids=0, errors=0;
+  let buys = 0, holds = 0, avoids = 0, errors = 0;
 
   results.forEach(r => {
-    if (r.error) { errors++; grid.insertAdjacentHTML('beforeend', errorCardHTML(r)); return; }
+    if (r.error) {
+      errors++;
+      grid.insertAdjacentHTML('beforeend', errorCardHTML(r));
+      return;
+    }
+
     const sig = r.signal;
+
     if (sig.includes('BUY')) buys++;
-    else if (sig==='HOLD') holds++;
+    else if (sig === 'HOLD') holds++;
     else avoids++;
+
     grid.insertAdjacentHTML('beforeend', stockCardHTML(r));
   });
 
   const now = new Date().toLocaleTimeString();
-  document.getElementById('summary-inner').innerHTML = `
-    <div class="summ-item"><div class="summ-lbl">Analyzed</div><div class="summ-val" style="color:var(--accent)">${results.length}</div></div>
-    <div class="summary-sep"></div>
-    <div class="summ-item"><div class="summ-lbl">Buy Signals</div><div class="summ-val" style="color:var(--green)">${buys}</div></div>
-    <div class="summ-item"><div class="summ-lbl">Hold</div><div class="summ-val" style="color:var(--yellow)">${holds}</div></div>
-    <div class="summ-item"><div class="summ-lbl">Avoid</div><div class="summ-val" style="color:var(--red)">${avoids}</div></div>
-    ${errors ? `<div class="summ-item"><div class="summ-lbl">Errors</div><div class="summ-val" style="color:var(--muted)">${errors}</div></div>` : ''}
-    <span class="summ-time">Updated ${now}</span>`;
 
-  document.getElementById('section-count').textContent = `${results.length} ticker${results.length!==1?'s':''}`;
+  document.getElementById('summary-inner').innerHTML = `
+    <div class="summ-item">
+      <div class="summ-lbl">Analyzed</div>
+      <div class="summ-val" style="color:var(--accent)">
+        ${results.length}
+      </div>
+    </div>
+
+    <div class="summary-sep"></div>
+
+    <div class="summ-item">
+      <div class="summ-lbl">Buy Signals</div>
+      <div class="summ-val" style="color:var(--green)">
+        ${buys}
+      </div>
+    </div>
+
+    <div class="summ-item">
+      <div class="summ-lbl">Hold</div>
+      <div class="summ-val" style="color:var(--yellow)">
+        ${holds}
+      </div>
+    </div>
+
+    <div class="summ-item">
+      <div class="summ-lbl">Avoid</div>
+      <div class="summ-val" style="color:var(--red)">
+        ${avoids}
+      </div>
+    </div>
+
+    ${errors ? `
+      <div class="summ-item">
+        <div class="summ-lbl">Errors</div>
+        <div class="summ-val" style="color:var(--muted)">
+          ${errors}
+        </div>
+      </div>
+    ` : ''}
+
+    <span class="summ-time">Updated ${now}</span>
+  `;
+
+  document.getElementById('section-count').textContent =
+    `${results.length} ticker${results.length !== 1 ? 's' : ''}`;
+
   show('summary-bar');
   show('results-section');
 }
 
 function stockCardHTML(r) {
+
   const sig = r.signal;
-  const sigKey = sig==='STRONG BUY'?'SB': sig==='BUY'?'B': sig==='HOLD'?'H':'A';
-  const stripeClass = {SB:'stripe-sb',B:'stripe-b',H:'stripe-h',A:'stripe-a'}[sigKey];
-  const barColor    = {SB:'var(--green)',B:'var(--lime)',H:'var(--yellow)',A:'var(--red)'}[sigKey];
-  const pct = (r.score/r.total)*100;
 
-  const chg = r.price.change, chgPct = r.price.change_pct;
-  const chgClass = chg>0?'col-up':chg<0?'col-down':'col-flat';
-  const chgSign  = chg>0?'+':'';
+  const sigKey =
+    sig === 'STRONG BUY' ? 'SB' :
+    sig === 'BUY' ? 'B' :
+    sig === 'HOLD' ? 'H' : 'A';
 
-  const condHTML = Object.entries(r.conditions).map(([k,v])=>
-    `<span class="pill ${v?'pill-pass':'pill-fail'}">${v?'✓':'✗'} ${k}</span>`
+  const stripeClass = {
+    SB: 'stripe-sb',
+    B: 'stripe-b',
+    H: 'stripe-h',
+    A: 'stripe-a'
+  }[sigKey];
+
+  const barColor = {
+    SB: 'var(--green)',
+    B: 'var(--lime)',
+    H: 'var(--yellow)',
+    A: 'var(--red)'
+  }[sigKey];
+
+  const pct = (r.score / r.total) * 100;
+
+  const price = r.price || {};
+
+  const chg = Number(price.change || 0);
+  const chgPct = Number(price.change_pct || 0);
+
+  const chgClass =
+    chg > 0 ? 'col-up' :
+    chg < 0 ? 'col-down' :
+    'col-flat';
+
+  const chgSign = chg > 0 ? '+' : '';
+
+  const condHTML = Object.entries(r.conditions).map(([k, v]) =>
+    `<span class="pill ${v ? 'pill-pass' : 'pill-fail'}">
+      ${v ? '✓' : '✗'} ${k}
+    </span>`
   ).join('');
 
-  const ind = r.indicators;
-  const rsiClass  = ind.rsi>=70?'bad':ind.rsi>=50?'good':'warn';
-  const macdClass = ind.macd>ind.macd_signal?'good':'bad';
-  const volClass  = ind.volume>ind.avg_volume*1.3?'good':'';
+  const ind = r.indicators || {};
 
-  const chartAttr = encodeURIComponent(JSON.stringify(r.chart_data));
+  const rsiClass =
+    ind.rsi >= 70 ? 'bad' :
+    ind.rsi >= 50 ? 'good' :
+    'warn';
+
+  const macdClass =
+    ind.macd > ind.macd_signal ? 'good' : 'bad';
+
+  const volClass =
+    ind.volume > ind.avg_volume * 1.3 ? 'good' : '';
 
   return `
-  <div class="stock-card" id="card-${r.ticker}" data-chart="${chartAttr}">
+  <div class="stock-card" id="card-${r.ticker}">
+
     <div class="card-stripe ${stripeClass}"></div>
+
     <div class="card-head">
       <div>
         <div class="card-ticker">${r.ticker}</div>
-        <div class="card-company">${r.company_name||''}</div>
-        <div class="card-sector">${r.sector!=='N/A'?r.sector:''}</div>
+
+        <div class="card-company">
+          ${r.company_name || ''}
+        </div>
+
+        <div class="card-sector">
+          ${r.sector !== 'N/A' ? r.sector : ''}
+        </div>
       </div>
-      <div class="sig-badge sig-${sigKey}">${sig}</div>
+
+      <div class="sig-badge sig-${sigKey}">
+        ${sig}
+      </div>
     </div>
+
     <div class="card-price-row">
-      <div class="price-big">$${r.price.current.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div class="price-delta ${chgClass}">${chgSign}${chg} (${chgSign}${chgPct}%)</div>
+      <div class="price-big">
+        $${Number(r.price?.current || 0).toLocaleString(
+          'en-US',
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }
+        )}
+      </div>
+
+      <div class="price-delta ${chgClass}">
+        ${chgSign}${chg} (${chgSign}${chgPct}%)
+      </div>
     </div>
+
     <div class="card-score">
+
       <div class="score-row">
         <span class="score-txt">Conditions Met</span>
-        <span class="score-num">${r.score} / ${r.total}</span>
+
+        <span class="score-num">
+          ${r.score} / ${r.total}
+        </span>
       </div>
-      <div class="score-track"><div class="score-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      <div class="cond-pills">${condHTML}</div>
+
+      <div class="score-track">
+        <div
+          class="score-fill"
+          style="width:${pct}%;background:${barColor}">
+        </div>
+      </div>
+
+      <div class="cond-pills">
+        ${condHTML}
+      </div>
+
     </div>
+
     <div class="ind-grid">
-      <div class="ind-cell"><div class="ind-lbl">RSI (14)</div><div class="ind-val ${rsiClass}">${ind.rsi}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">MACD</div><div class="ind-val ${macdClass}">${ind.macd}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">Signal</div><div class="ind-val">${ind.macd_signal}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">EMA 20</div><div class="ind-val">$${ind.ema20}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">EMA 50</div><div class="ind-val">$${ind.ema50}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">Volume</div><div class="ind-val ${volClass}">${fmtVol(ind.volume)}</div></div>
+
+      <div class="ind-cell">
+        <div class="ind-lbl">RSI (14)</div>
+        <div class="ind-val ${rsiClass}">
+          ${ind.rsi}
+        </div>
+      </div>
+
+      <div class="ind-cell">
+        <div class="ind-lbl">MACD</div>
+        <div class="ind-val ${macdClass}">
+          ${ind.macd}
+        </div>
+      </div>
+
+      <div class="ind-cell">
+        <div class="ind-lbl">Signal</div>
+        <div class="ind-val">
+          ${ind.macd_signal}
+        </div>
+      </div>
+
+      <div class="ind-cell">
+        <div class="ind-lbl">EMA 20</div>
+        <div class="ind-val">
+          $${ind.ema20}
+        </div>
+      </div>
+
+      <div class="ind-cell">
+        <div class="ind-lbl">EMA 50</div>
+        <div class="ind-val">
+          $${ind.ema50}
+        </div>
+      </div>
+
+      <div class="ind-cell">
+        <div class="ind-lbl">Volume</div>
+        <div class="ind-val ${volClass}">
+          ${fmtVol(ind.volume)}
+        </div>
+      </div>
+
     </div>
+
     <div class="card-chart-toggle" onclick="toggleChart('${r.ticker}')">
-      <span>60-Day Price Chart</span>
+      <span>Interactive TradingView Chart</span>
       <span class="toggle-arrow" id="arr-${r.ticker}">▼</span>
     </div>
+
     <div class="card-chart-area" id="chart-area-${r.ticker}">
-      <canvas id="chart-${r.ticker}" height="160"></canvas>
+      <div id="tv-chart-${r.ticker}" style="height:420px;"></div>
     </div>
+
   </div>`;
 }
 
 function errorCardHTML(r) {
-  return `<div class="error-card"><div class="ec-ticker">${r.ticker}</div><div class="ec-msg">⚠ ${r.error||'Unknown error'}</div></div>`;
+  return `
+    <div class="error-card">
+      <div class="ec-ticker">${r.ticker}</div>
+      <div class="ec-msg">
+        ⚠ ${r.error || 'Unknown error'}
+      </div>
+    </div>
+  `;
 }
 
 const chartInstances = {};
+
 function toggleChart(ticker) {
-  const area = document.getElementById('chart-area-'+ticker);
-  const arr  = document.getElementById('arr-'+ticker);
-  const card = document.getElementById('card-'+ticker);
-  const isOpen = area.style.display==='block';
+
+  const area = document.getElementById('chart-area-' + ticker);
+  const arr = document.getElementById('arr-' + ticker);
+  const card = document.getElementById('card-' + ticker);
+
+  const isOpen = area.style.display === 'block';
+
   if (isOpen) {
-    area.style.display='none'; arr.classList.remove('open'); card.classList.remove('active');
+
+    area.style.display = 'none';
+    arr.classList.remove('open');
+    card.classList.remove('active');
+
   } else {
-    area.style.display='block'; arr.classList.add('open'); card.classList.add('active');
+
+    area.style.display = 'block';
+    arr.classList.add('open');
+    card.classList.add('active');
+
     if (!chartInstances[ticker]) {
-      drawChart(ticker, JSON.parse(decodeURIComponent(card.dataset.chart)));
+      drawChart(ticker);
+      chartInstances[ticker] = true;
     }
   }
 }
 
-function drawChart(ticker, data) {
-  const ctx = document.getElementById('chart-'+ticker).getContext('2d');
-  chartInstances[ticker] = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: data.map(d=>d.date),
-      datasets: [
-        { label:'Price', data:data.map(d=>d.close), borderColor:'#00c8f0', borderWidth:1.5, pointRadius:0, tension:0.3, fill:{target:'origin',above:'rgba(0,200,240,0.04)'} },
-        { label:'EMA20', data:data.map(d=>d.ema20), borderColor:'#d4a017', borderWidth:1, borderDash:[4,3], pointRadius:0, tension:0.3 },
-        { label:'EMA50', data:data.map(d=>d.ema50), borderColor:'#a371f7', borderWidth:1, borderDash:[6,4], pointRadius:0, tension:0.3 },
-      ]
-    },
-    options: {
-      responsive:true,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{labels:{color:'#5a7080',font:{family:"'IBM Plex Mono'",size:10},boxWidth:16}},
-        tooltip:{
-          backgroundColor:'#10141b',borderColor:'#1c2535',borderWidth:1,
-          titleColor:'#c8d6e5',bodyColor:'#5a7080',
-          titleFont:{family:"'IBM Plex Mono'",size:11},bodyFont:{family:"'IBM Plex Mono'",size:10},
-          callbacks:{label:ctx=>` ${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(2)??'—'}`}
-        }
-      },
-      scales:{
-        x:{ticks:{color:'#3a5060',font:{family:"'IBM Plex Mono'",size:9},maxTicksLimit:7,maxRotation:0},grid:{color:'#12191f'}},
-        y:{ticks:{color:'#3a5060',font:{family:"'IBM Plex Mono'",size:9},callback:v=>'$'+v.toFixed(0)},grid:{color:'#12191f'}}
-      }
-    }
+function drawChart(ticker) {
+
+  let symbol = ticker.toUpperCase();
+
+  const indianStocks = [
+    "RELIANCE",
+    "TCS",
+    "INFY",
+    "HDFCBANK",
+    "ICICIBANK",
+    "SBIN",
+    "LT",
+    "WIPRO",
+    "AXISBANK",
+    "BHARTIARTL"
+  ];
+
+  if (indianStocks.includes(symbol)) {
+    symbol = "NSE:" + symbol;
+  } else {
+    symbol = "NASDAQ:" + symbol;
+  }
+
+  new TradingView.widget({
+    autosize: true,
+    symbol: symbol,
+    interval: "D",
+    timezone: "Etc/UTC",
+    theme: "dark",
+    style: "1",
+    locale: "en",
+    toolbar_bg: "#0c0f14",
+    enable_publishing: false,
+    hide_top_toolbar: false,
+    hide_legend: false,
+    save_image: false,
+    container_id: "tv-chart-" + ticker
   });
 }
 
-function show(id) { document.getElementById(id).style.display='block'; }
-function hide(id) { document.getElementById(id).style.display='none'; }
-function setError(msg) {
-  const box = document.getElementById('error-box');
-  if (msg) { document.getElementById('error-text').textContent=msg; box.style.display='block'; }
-  else { box.style.display='none'; }
+function show(id) {
+  document.getElementById(id).style.display = 'block';
 }
+
+function hide(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+function setError(msg) {
+
+  const box = document.getElementById('error-box');
+
+  if (msg) {
+    document.getElementById('error-text').textContent = msg;
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
 function fmtVol(v) {
-  if(v>=1e9) return (v/1e9).toFixed(1)+'B';
-  if(v>=1e6) return (v/1e6).toFixed(1)+'M';
-  if(v>=1e3) return (v/1e3).toFixed(0)+'K';
+
+  if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+
+  if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K';
+
   return v.toString();
 }
-</script>
-</body>
-</html>
