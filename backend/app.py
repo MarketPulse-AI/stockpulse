@@ -97,9 +97,7 @@ def fetch_stock_data(ticker):
     possible = get_possible_tickers(ticker)
 
     for symbol in possible:
-
         try:
-
             hist = yf.download(
                 symbol,
                 period="6mo",
@@ -108,6 +106,9 @@ def fetch_stock_data(ticker):
                 auto_adjust=True,
                 threads=False
             )
+
+            if isinstance(hist.columns, pd.MultiIndex):
+                hist.columns = hist.columns.get_level_values(0)
 
             stock = yf.Ticker(symbol)
 
@@ -118,7 +119,6 @@ def fetch_stock_data(ticker):
             print(f"Error fetching {symbol}: {e}")
 
     return None, None, ticker
-
 # ---------------------------------------------------
 # ANALYSIS
 # ---------------------------------------------------
