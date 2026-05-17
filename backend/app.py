@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import yfinance as yf
 import numpy as np
+import pandas as pd
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -20,7 +21,7 @@ CORS(app)
 
 def safe_float(val, fallback=0.0):
     try:
-        f = float(val)
+        f = float(val.iloc[0]) if hasattr(val, "iloc") else float(val)
         return fallback if np.isnan(f) else f
     except:
         return fallback
@@ -98,6 +99,7 @@ def fetch_stock_data(ticker):
 
     for symbol in possible:
         try:
+
             hist = yf.download(
                 symbol,
                 period="6mo",
@@ -119,6 +121,7 @@ def fetch_stock_data(ticker):
             print(f"Error fetching {symbol}: {e}")
 
     return None, None, ticker
+
 # ---------------------------------------------------
 # ANALYSIS
 # ---------------------------------------------------
@@ -152,6 +155,7 @@ def analyze_stock(ticker):
         hist["BB_UPPER"], hist["BB_MID"], hist["BB_LOWER"] = compute_bollinger(
             hist["Close"]
         )
+
         last = hist.iloc[-1]
         prev = hist.iloc[-2]
 
@@ -211,10 +215,11 @@ def analyze_stock(ticker):
             grade = "D"
 
         price_change = last_close - prev_close
+
         price_change_pct = (
-    (price_change / prev_close) * 100
-    if prev_close != 0 else 0
-)
+            (price_change / prev_close) * 100
+            if prev_close != 0 else 0
+        )
 
         chart_data = []
 
