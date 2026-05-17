@@ -152,18 +152,17 @@ def analyze_stock(ticker):
         hist["BB_UPPER"], hist["BB_MID"], hist["BB_LOWER"] = compute_bollinger(
             hist["Close"]
         )
-
         last = hist.iloc[-1]
         prev = hist.iloc[-2]
 
-        last_close = safe_float(last["Close"])
-        prev_close = safe_float(prev["Close"])
+        last_close = safe_float(hist["Close"].iloc[-1])
+        prev_close = safe_float(hist["Close"].iloc[-2])
 
-        last_open = safe_float(last["Open"])
-        last_high = safe_float(last["High"])
-        last_low = safe_float(last["Low"])
+        last_open = safe_float(hist["Open"].iloc[-1])
+        last_high = safe_float(hist["High"].iloc[-1])
+        last_low = safe_float(hist["Low"].iloc[-1])
 
-        volume = safe_float(last["Volume"])
+        volume = safe_float(hist["Volume"].iloc[-1])
 
         avg_volume = safe_float(
             hist["Volume"].rolling(10).mean().iloc[-1]
