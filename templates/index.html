@@ -265,7 +265,7 @@ header {
   <div class="header-right">
     <span id="market-status-badge" class="market-status">—</span>
     <span id="clock">—</span>
-    <span style="color:var(--border2)">UTC</span>
+    <span style="color:var(--border2)">IST</span>
   </div>
 </header>
 
@@ -324,14 +324,32 @@ const API = "";
 
 function updateClock() {
   const now = new Date();
-  document.getElementById('clock').textContent = now.toUTCString().slice(17,25);
+
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour12: false
+    });
+
   const badge = document.getElementById('market-status-badge');
-  const nyNow = new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
-  const day = nyNow.getDay(), h = nyNow.getHours(), m = nyNow.getMinutes();
-  const mins = h*60+m;
-  const isOpen = day>=1 && day<=5 && mins>=570 && mins<960;
+
+  const indiaNow = new Date(
+    now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })
+  );
+
+  const day = indiaNow.getDay(),
+        h = indiaNow.getHours(),
+        m = indiaNow.getMinutes();
+
+  const mins = h * 60 + m;
+
+  // Indian stock market hours: 9:15 AM – 3:30 PM IST
+  const isOpen = day >= 1 && day <= 5 && mins >= 555 && mins < 930;
+
   badge.textContent = isOpen ? 'MARKET OPEN' : 'MARKET CLOSED';
-  badge.className = 'market-status ' + (isOpen ? 'market-open' : 'market-close');
+
+  badge.className =
+    'market-status ' + (isOpen ? 'market-open' : 'market-close');
 }
 setInterval(updateClock, 1000);
 updateClock();
