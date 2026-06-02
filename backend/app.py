@@ -89,9 +89,6 @@ def compute_bollinger(series, window=20):
 
     return upper, sma, lower
 
-# ---------------------------------------------------
-# FETCH DATA
-# ---------------------------------------------------
 
 def fetch_stock_data(ticker):
 
@@ -112,6 +109,9 @@ def fetch_stock_data(ticker):
             if isinstance(hist.columns, pd.MultiIndex):
                 hist.columns = hist.columns.get_level_values(0)
 
+            # Remove broken Yahoo rows with NaN Close
+            hist = hist.dropna(subset=["Close"])
+
             stock = yf.Ticker(symbol)
 
             if not hist.empty and len(hist) > 30:
@@ -121,7 +121,6 @@ def fetch_stock_data(ticker):
             print(f"Error fetching {symbol}: {e}")
 
     return None, None, ticker
-
 # ---------------------------------------------------
 # ANALYSIS
 # ---------------------------------------------------
