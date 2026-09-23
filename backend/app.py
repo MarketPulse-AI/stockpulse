@@ -161,6 +161,23 @@ def analyze_stock(ticker):
         last_close = safe_float(hist["Close"].iloc[-1])
         prev_close = safe_float(hist["Close"].iloc[-2])
 
+        try:
+            current_price = float(stock.fast_info["last_price"])
+            previous_close = float(stock.fast_info["previous_close"])
+
+            if not final_ticker.endswith(".NS") and not final_ticker.endswith(".BO"):
+                quote = stock.info
+                regular_previous_close = quote.get("regularMarketPreviousClose")
+
+                if regular_previous_close is not None:
+                    previous_close = float(regular_previous_close)
+
+        except:
+            current_price = last_close
+            previous_close = prev_close
+
+        last_open = safe_float(hist["Open"].iloc[-1])
+
         last_open = safe_float(hist["Open"].iloc[-1])
         last_high = safe_float(hist["High"].iloc[-1])
         last_low = safe_float(hist["Low"].iloc[-1])
@@ -213,13 +230,12 @@ def analyze_stock(ticker):
             signal = "AVOID"
             grade = "D"
 
-        price_change = last_close - prev_close
+        price_change = current_price - previous_close
 
         price_change_pct = (
-            (price_change / prev_close) * 100
-            if prev_close != 0 else 0
-        )
-
+           (price_change / previous_close) * 100
+           if previous_close != 0 else 0
+     )
         chart_data = []
 
         for date, row in hist.tail(90).iterrows():
@@ -262,7 +278,7 @@ def analyze_stock(ticker):
             "conditions": conditions,
 
             "price": {
-                "current": round(last_close, 2),
+                "current": round(current_price, 2),
                 "open": round(last_open, 2),
                 "high": round(last_high, 2),
                 "low": round(last_low, 2),
