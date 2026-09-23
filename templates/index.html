@@ -453,6 +453,7 @@ function renderAll(results) {
 }
 
 function stockCardHTML(r) {
+  const currency = r.ticker.toUpperCase().endsWith('.NS') ? '₹' : '$';
   const sig = r.signal;
   const sigKey = sig==='STRONG BUY'?'SB': sig==='BUY'?'B': sig==='HOLD'?'H':'A';
   const stripeClass = {SB:'stripe-sb',B:'stripe-b',H:'stripe-h',A:'stripe-a'}[sigKey];
@@ -486,7 +487,7 @@ function stockCardHTML(r) {
       <div class="sig-badge sig-${sigKey}">${sig}</div>
     </div>
     <div class="card-price-row">
-      <div class="price-big">$${r.price.current.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="price-big">${currency}${r.price.current.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="price-delta ${chgClass}">${chgSign}${chg} (${chgSign}${chgPct}%)</div>
     </div>
     <div class="card-score">
@@ -498,14 +499,15 @@ function stockCardHTML(r) {
       <div class="cond-pills">${condHTML}</div>
     </div>
     <div class="ind-grid">
-      <div class="ind-cell"><div class="ind-lbl">RSI (14)</div><div class="ind-val ${rsiClass}">${ind.rsi}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">MACD</div><div class="ind-val ${macdClass}">${ind.macd}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">Signal</div><div class="ind-val">${ind.macd_signal}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">EMA 20</div><div class="ind-val">$${ind.ema20}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">EMA 50</div><div class="ind-val">$${ind.ema50}</div></div>
-      <div class="ind-cell"><div class="ind-lbl">Volume</div><div class="ind-val ${volClass}">${fmtVol(ind.volume)}</div></div>
+     <div class="ind-cell"><div class="ind-lbl">RSI (14)</div><div class="ind-val ${rsiClass}">${ind.rsi}</div></div>
+     <div class="ind-cell"><div class="ind-lbl">MACD</div><div class="ind-val ${macdClass}">${ind.macd}</div></div>
+     <div class="ind-cell"><div class="ind-lbl">Signal</div><div class="ind-val">${ind.macd_signal}</div></div>
+     <div class="ind-cell"><div class="ind-lbl">EMA 20</div><div class="ind-val">${currency}${ind.ema20}</div></div>
+     <div class="ind-cell"><div class="ind-lbl">EMA 50</div><div class="ind-val">${currency}${ind.ema50}</div></div>
+     <div class="ind-cell"><div class="ind-lbl">Volume</div><div class="ind-val ${volClass}">${fmtVol(ind.volume)}</div></div> 
     </div>
-    <div class="card-chart-toggle" onclick="toggleChart('${r.ticker}')">
+    
+     <div class="card-chart-toggle" onclick="toggleChart('${r.ticker}')">
       <span>60-Day Price Chart</span>
       <span class="toggle-arrow" id="arr-${r.ticker}">▼</span>
     </div>
@@ -536,6 +538,7 @@ function toggleChart(ticker) {
 }
 
 function drawChart(ticker, data) {
+  const currency = ticker.toUpperCase().endsWith('.NS') ? '₹' : '$';
   const ctx = document.getElementById('chart-'+ticker).getContext('2d');
   chartInstances[ticker] = new Chart(ctx, {
     type: 'line',
@@ -556,12 +559,12 @@ function drawChart(ticker, data) {
           backgroundColor:'#10141b',borderColor:'#1c2535',borderWidth:1,
           titleColor:'#c8d6e5',bodyColor:'#5a7080',
           titleFont:{family:"'IBM Plex Mono'",size:11},bodyFont:{family:"'IBM Plex Mono'",size:10},
-          callbacks:{label:ctx=>` ${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(2)??'—'}`}
+          callbacks:{label:ctx=>` ${ctx.dataset.label}: ${currency}${ctx.parsed.y?.toFixed(2)??'—'}`}
         }
       },
       scales:{
         x:{ticks:{color:'#3a5060',font:{family:"'IBM Plex Mono'",size:9},maxTicksLimit:7,maxRotation:0},grid:{color:'#12191f'}},
-        y:{ticks:{color:'#3a5060',font:{family:"'IBM Plex Mono'",size:9},callback:v=>'$'+v.toFixed(0)},grid:{color:'#12191f'}}
+        y:{ticks:{color:'#3a5060',font:{family:"'IBM Plex Mono'",size:9},callback:v=>currency+v.toFixed(0)},grid:{color:'#12191f'}}
       }
     }
   });
